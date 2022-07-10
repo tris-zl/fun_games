@@ -3,11 +3,12 @@ from collections import Counter
 import time
 import math
 
+
 board = [[' A1', ' A2', ' A3'],
          [' B1', ' B2', ' B3'],
          [' C1', ' C2', ' C3']]
 
-symbols = [" O ", " X "]
+symbols = []
 players = ["AiPlayer", "HumanPlayer"]
 
 
@@ -28,6 +29,11 @@ class HumanPlayer(Player):
 
     def move(self):
         try:
+            open_spots = Game.open_spots()
+            if open_spots == 9:
+                show = Game.show_board()
+                print(show)
+
             result = Game().check_winner()
             if not result:
 
@@ -45,38 +51,13 @@ class HumanPlayer(Player):
                 if no_spot == 3:
                     print("Invalid enter. ")
                     self.move()
-                show = Game.show_board()
-                print(show)
 
-                num_of_open_spots = Game.open_spots()
-                if self.symbol == " X " and num_of_open_spots > 0:  # if no tie and symbol = X
-                    # if human vs computer --> computer's turn
-                    if self.mode == 2:
-                        AiPlayer(" O ", self.mode).move()
-                    # if human vs AI
-                    elif self.mode == 4:
-                        UnbeatableAi(" O ", self.mode).move()
-                    # if human vs human --> human's turn (player2)
-                    else:
-                        SecondHumanPlayer(" O ", self.mode).move()
-                elif self.symbol == " O " and num_of_open_spots > 0:  # if no tie and symbol = O
-                    # if human vs computer --> computer's turn
-                    if self.mode == 2:
-                        AiPlayer(" X ", self.mode).move()
-                    # if human vs AI
-                    elif self.mode == 4:
-                        UnbeatableAi(" X ", self.mode).move()
-                    # if human vs human --> human's turn (player2)
-                    else:
-                        SecondHumanPlayer(" X ", self.mode).move()
-
-                # if number of available spots decreased to 0 after move
-                else:
-                    result = Game().check_winner()
-                    print(result)
             else:
                 result = Game().check_winner()
                 print(result)
+
+            show = Game.show_board()
+            print(show)
 
         except ValueError as err:
             print(err)
@@ -116,9 +97,9 @@ class AiPlayer(Player):
                             board[i][j] = self.symbol   # place symbol
                             # call minimax
                             if self.symbol == " O ":
-                                score = UnbeatableAi(" O ", self.mode).minimax(" X ", board, False)
+                                score = UnbeatableAi(" O ", self.mode).minimax(" X ", False)
                             else:
-                                score = UnbeatableAi(" X ", self.mode).minimax(" O ", board, False)
+                                score = UnbeatableAi(" X ", self.mode).minimax(" O ", False)
                             board[i][j] = saved  # restore board as it was before
                             #  compares all possibilities and sets the best move
                             if score > best_score:
@@ -126,30 +107,11 @@ class AiPlayer(Player):
                                 best_move = [i, j]
                 board[best_move[0]][best_move[1]] = self.symbol  # best move
 
-            show = Game.show_board()
-            print(show)
-
-            num_of_open_spots = Game.open_spots()
-            if self.symbol == " X " and num_of_open_spots > 0:  # if no tie and symbol = X
-                # if human vs computer or AI--> human's turn
-                if self.mode == 2 or self.mode == 4:
-                    HumanPlayer(" O ", self.mode).move()
-                # if computer vs computer --> computer's turn (player2)
-                else:
-                    SecondAiPlayer(" O ", self.mode).move()
-            elif self.symbol == " O " and num_of_open_spots > 0:    # if no tie and symbol = 0
-                # if human vs computer --> human's turn
-                if self.mode == 2 or self.mode == 4:
-                    HumanPlayer(" X ", self.mode).move()
-                # if computer vs computer --> computer's turn (player2)
-                else:
-                    SecondAiPlayer(" X ", self.mode).move()
-            else:
-                result = Game().check_winner()
-                print(result)
         else:
-            result = Game().check_winner()
             print(result)
+
+        show = Game.show_board()
+        print(show)
 
 
 class SecondHumanPlayer(HumanPlayer):
@@ -169,7 +131,7 @@ class UnbeatableAi(AiPlayer):
     def __init__(self, symbol, mode):
         super().__init__(symbol, mode)
 
-    def minimax(self, symbol, current_board, is_maximizing):
+    def minimax(self, symbol, is_maximizing):
         result = Game().check_winner()
 
         # if there is a tie or somebody won
@@ -187,9 +149,9 @@ class UnbeatableAi(AiPlayer):
                             saved = board[i][j]
                             board[i][j] = symbol
                             if symbol == " O ":
-                                score = self.minimax(" X ", board, False)
+                                score = self.minimax(" X ", False)
                             else:
-                                score = self.minimax(" O ", board, False)
+                                score = self.minimax(" O ", False)
                             board[i][j] = saved
                             if score > best_score:
                                 best_score = score
@@ -204,9 +166,9 @@ class UnbeatableAi(AiPlayer):
                             saved = board[i][j]
                             board[i][j] = symbol
                             if symbol == " O ":
-                                score = self.minimax(" X ", board, True)
+                                score = self.minimax(" X ", True)
                             else:
-                                score = self.minimax(" O ", board, True)
+                                score = self.minimax(" O ", True)
                             board[i][j] = saved
                             if score < best_score:
                                 best_score = score
@@ -222,81 +184,99 @@ class Game:
         try:
             game_option = int(input("Choose from: 1vs1(1), MeVsComputer(2), ComputerVsComputer(3), MeVsAI(4): "))
 
+            letter = input("Choose between O and X: ")
+            letter_two = ""
+            if letter == "O" or letter == "X":
+                letter = f' {letter} '
+                letter_two = " O " if letter == " X " else " X "
+            else:
+                print("Invalid enter.")
+                self.set_up()
+
+            result = None
+
             # human vs human
             if game_option == 1:
                 players.insert(1, "SecondHumanPlayer")
-                letter = input("Choose between O and X: ")
                 choice = random.choice(players)
-                show = self.show_board()
-                print(show)
-                if letter == "O" or letter == "o":
-                    if choice == "SecondHumanPlayer":
-                        SecondHumanPlayer(" X ", 1).move()
-                    else:
-                        HumanPlayer(" O ", 1).move()
-                elif letter == "X" or letter == "x":
-                    if choice == "SecondHumanPlayer":
-                        SecondHumanPlayer(" O ", 1).move()
-                    else:
-                        HumanPlayer(" X ", 1).move()
+                if choice == "SecondHumanPlayer":
+                    while not result:
+                        SecondHumanPlayer(letter_two, 1).move()
+                        result = self.check_winner()
+                        if not result:
+                            HumanPlayer(letter, 1).move()
+                        result = self.check_winner()
                 else:
-                    print("Invalid enter.")
-                    self.set_up()
+                    while not result:
+                        HumanPlayer(letter, 1).move()
+                        result = self.check_winner()
+                        if not result:
+                            SecondHumanPlayer(letter_two, 1).move()
+                        else:
+                            result = self.check_winner()
+                            print(result)
+                        result = self.check_winner()
 
             # human vs computer
             elif game_option == 2:
-                letter = input("Choose between O and X: ")
                 choice = random.choice(players)
-                if letter == "O" or letter == "o":
-                    if choice == "AiPlayer":
-                        AiPlayer(" X ", 2).move()
-                    else:
-                        show = self.show_board()
-                        print(show)
-                        HumanPlayer(" O ", 2).move()
-                elif letter == "X" or letter == "x":
-                    if choice == "AiPlayer":
-                        AiPlayer(" O ", 2).move()
-                    else:
-                        show = self.show_board()
-                        print(show)
-                        HumanPlayer(" X ", 2).move()
+                if choice == "AiPlayer":
+                    while not result:
+                        AiPlayer(letter_two, 2).move()
+                        result = self.check_winner()
+                        if not result:
+                            HumanPlayer(letter, 2).move()
+                        else:
+                            result = self.check_winner()
+                            print(result)
+                        result = self.check_winner()
                 else:
-                    print("Invalid enter.")
-                    self.set_up()
+                    while not result:
+                        HumanPlayer(letter, 2).move()
+                        result = self.check_winner()
+                        if not result:
+                            AiPlayer(letter_two, 2).move()
+                        else:
+                            result = self.check_winner()
+                            print(result)
+                        result = self.check_winner()
 
             # computer vs computer
             elif game_option == 3:
-                players.insert(2, "SecondAiPlayer")
-                choice = random.choice(players)
-                if choice == "SecondAiPlayer":
-                    SecondAiPlayer(" X ", 3).move()
-                else:
-                    AiPlayer(" O ", 3).move()
+                while not result:
+                    SecondAiPlayer(letter_two, 3).move()
+                    result = self.check_winner()
+                    if not result:
+                        AiPlayer(letter, 3).move()
+                    else:
+                        result = self.check_winner()
+                        print(result)
+                    result = self.check_winner()
 
             # human vs unbeatable AI
             elif game_option == 4:
-                letter = input("Choose between O and X: ")
                 players.insert(1, "UnbeatableAi")
                 choice = random.choice(players)
-                if letter == "O" or letter == "o":
-                    if choice == "UnbeatableAi":
-                        UnbeatableAi(" X ", 4).move()
-                    else:
-                        show = self.show_board()
-                        print(show)
-                        HumanPlayer(" O ", 4).move()
-                elif letter == "X" or letter == "x":
-                    if choice == "UnbeatableAi":
-                        UnbeatableAi(" O ", 4).move()
-                    else:
-                        show = self.show_board()
-                        print(show)
-                        HumanPlayer(" X ", 4).move()
-
-            else:
-                print("Invalid enter. ")
-                self.set_up()
+                if choice == "UnbeatableAi":
+                    while not result:
+                        UnbeatableAi(letter_two, 4).move()
+                        result = self.check_winner()
+                        if not result:
+                            HumanPlayer(letter, 4).move()
+                        else:
+                            result = self.check_winner()
+                            print(result)
+                        result = self.check_winner()
+                else:
+                    while not result:
+                        HumanPlayer(letter, 4).move()
+                        result = self.check_winner()
+                        if not result:
+                            UnbeatableAi(letter_two, 4).move()
+                        else:
+                            result = self.check_winner()
+                            print(result)
+                        result = self.check_winner()
 
         except ValueError as err:
             print(err)
@@ -354,6 +334,8 @@ class Game:
         if open_spots == 0:
             result = f'Tie.'
             return result
+
+        return None
 
     @staticmethod
     def scores(symbol, result):
